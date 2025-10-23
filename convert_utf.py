@@ -17,21 +17,32 @@ class SQLCleaner:
         def replacer(match):
             keyword = match.group(1)
             table = match.group(2)
+
+            # Cas spécifique pour steph_apps_FND_FLEX_VALUES#_bz
+            if table.lower() == 'steph_apps_fnd_flex_values#_bz':
+                return f"{keyword} DEV.LH2_BRONZE_DEV.steph_apps_FND_FLEX_VALUES"
+
+            # Cas général pour les tables finissant par _bz
             if table.lower().endswith('_bz'):
                 table_name = table[:-3]
                 return f"{keyword} DEV.LH2_BRONZE_DEV.{table_name}"
-            else:
-                return f"{keyword} DEV.LH2_SILVER_DEV.{table}"
+
+            # Sinon, on garde le schéma SILVER
+            return f"{keyword} DEV.LH2_SILVER_DEV.{table}"
         
         return re.sub(
-            r"\b(FROM|JOIN)\s+([A-Za-z0-9_]+)", 
+            r"\b(FROM|JOIN)\s+([A-Za-z0-9_#]+)", 
             replacer, 
             sql, 
             flags=re.IGNORECASE
         )
     
+    import re
+
+    import re
+
     def remove_or_comment_variables(self, data: str):
-        """Met en commentaire les variables globales g_* et locales v_*"""
+        """Met en commentaire les variables globales g_* et locales v_*, y compris v_procedure même si elle est sur la ligne de IS"""
         variables_pattern = [
             (r"^\s*g_programme\s*:=.*?;\s*", "g_programme"),
             (r"^\s*g_error_code\s*:=.*?;\s*", "g_error_code"),
@@ -43,10 +54,18 @@ class SQLCleaner:
             (r"^\s*g_status\s*:=.*?;\s*", "g_status"),
             (r"^\s*g_etape\s*:=.*?;\s*", "g_etape"),
             (r"^\s*g_level\s*:=.*?;\s*", "g_level"),
-            (r"^\s*v_procedure\s*:=.*?;\s*", "v_procedure"),
-            (r"^\s*v_date_deb_proc\s*:=.*?;\s*", "v_date_deb_proc"),
+            (r"^\s*v_date_deb_proc\s+TIMESTAMP\s*:=.*?;\s*", "v_date_deb_proc"),
         ]
-        
+
+        # Traitement spécial pour v_procedure sur la même ligne que IS
+        data = re.sub(
+            r"^(?P<indent>\s*)IS\s+(?P<decl>v_procedure\s+varchar2\s*\(\s*100\s*\)\s*:=.*?;)",
+            lambda m: f"{m.group('indent')}IS -- {m.group('decl')}",
+            data,
+            flags=re.IGNORECASE | re.MULTILINE
+        )
+
+        # Traitement des autres variables
         for pattern, var_name in variables_pattern:
             data = re.sub(
                 pattern,
@@ -54,9 +73,9 @@ class SQLCleaner:
                 data,
                 flags=re.IGNORECASE | re.MULTILINE
             )
-        
+
         return data
-    
+
     def clean_sql(self, data: str):
         """
         Nettoyage conservatif du SQL
@@ -245,8 +264,8 @@ def main():
         print("Aucune procédure trouvée. Traitement du fichier complet...")
         
         # Traitement du fichier complet
-        cleaned = cleaner.clean_sql(content)
-        cleaned = cleaner.remove_or_comment_variables(cleaned)
+       # cleaned = cleaner.clean_sql(content)
+      #  cleaned = cleaner.remove_or_comment_variables(cleaned)
         cleaned = cleaner.transform_table_references(cleaned)
         
         # Sauvegarde
@@ -264,9 +283,9 @@ def main():
     # Traitement de chaque procedure
     cleaned_procedures = []
     for i, (proc_name, proc_content) in enumerate(procedures, 1):
-        cleaned = cleaner.clean_sql(proc_content)
-        cleaned = cleaner.remove_or_comment_variables(cleaned)
-        cleaned = cleaner.transform_table_references(cleaned)
+        #cleaned = cleaner.clean_sql(proc_content)
+       # cleaned = cleaner.remove_or_comment_variables(proc_content)
+        cleaned = cleaner.transform_table_references(proc_content)
         cleaned_procedures.append((proc_name, cleaned))
     
     # Sauvegarde
