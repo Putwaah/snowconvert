@@ -361,7 +361,6 @@ def process_sql_file(file_path: str, output_dir: str) -> bool:
         try:
             with open(out_path, "w", encoding="utf-8") as out_f:
                 out_f.write(dbt_model)
-            print(f"[SUCCESS] {out_name}: Saved to {out_path}")
         except Exception as e:
             print(f"[ERROR] {out_name}: Failed to write output file - {e}")
 

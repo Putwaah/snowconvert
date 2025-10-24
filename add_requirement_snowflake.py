@@ -4,7 +4,7 @@ import sys
 
 # Fichier source
 input_file = sys.argv[1]
-output_dir = "procedures_modifiees"
+output_dir = "modified_procedures"
 os.makedirs(output_dir, exist_ok=True)
 
 # Lire le contenu
@@ -114,11 +114,9 @@ for i, match in enumerate(matches):
         if table_name_match:
             table_name = table_name_match.group(1)
         else:
-            print(f"Nom de table introuvable pour {proc_name}, procédure ignorée.")
+            print(f"Table name not found for {proc_name}, procedure ignored.")
             continue
-        if table_name.endswith('_TEMP'):
-            print("c'est un temp")
-
+        
         # Concaténer tous les blocs INSERT
         insert_block = "\n\n".join(insert_matches)
         new_block = generate_header(proc_name, table_name) + insert_block + generate_footer(proc_name, table_name)
@@ -126,6 +124,6 @@ for i, match in enumerate(matches):
         with open(f"{output_dir}/{proc_name}.sql", "w", encoding="utf-8") as out_file:
             out_file.write(new_block)
     else:
-        print(f"Aucun INSERT INTO trouvé pour {proc_name}, procédure ignorée.")
+        print(f"No INSERT INTO found for {proc_name}, procedure ignored.")
 
-print(f"{len(matches)} procédures analysées. Fichiers générés dans '{output_dir}'")
+print(f"{len(matches)} procedures analyzed. Files generated in '{output_dir}'")

@@ -94,7 +94,7 @@ class SQLCleaner:
             if re.search(pattern, data, flags=re.IGNORECASE | re.DOTALL):
                 data = re.sub(
                     pattern,
-                    lambda m: f"/* PROCEDURE {proc_name} desactivee pour SnowConvert\n{m.group(1)}\n*/\n",
+                    lambda m: f"/* PROCEDURE {proc_name} disabled for SnowConvert\n{m.group(1)}\n*/\n",
                     data,
                     flags=re.IGNORECASE | re.DOTALL
                 )
@@ -214,7 +214,7 @@ def load_sql_file(path: str):
             print(f"Erreur avec encodage {encoding}: {e}")
             continue
     
-    print(f" Impossible de lire le fichier avec les encodages: {encodings}")
+    print(f" Unable to read the file with the encodings: {encodings}")
     return None
 
 
@@ -226,11 +226,11 @@ def save_procedures(procedures, output_dir):
     file_path = os.path.join(output_dir, "all_procedures_cleaned.sql")
     with open(file_path, "w", encoding="utf-8") as f:
         for i, (proc_name, proc_content) in enumerate(procedures):
-            f.write(f"-- Procédure {i+1}/{len(procedures)}: {proc_name}\n")
+            f.write(f"-- Procedure {i+1}/{len(procedures)}: {proc_name}\n")
             f.write(f"-- {'-'*60}\n\n")
             f.write(proc_content.strip() + "\n\n")
     
-    print(f"{len(procedures)} procédure(s) enregistrée(s) dans: {file_path}")
+    print(f"{len(procedures)} procedure(s) recorded in: {file_path}")
 
 
 def main():
@@ -244,7 +244,7 @@ def main():
     
     # Validation du fichier d'entrée
     if not os.path.isfile(input_file):
-        print(f"Erreur: Le fichier '{input_file}' n'existe pas.")
+        print(f"Error: File '{input_file}' not exist.")
         return 1
     
     print(f"Traitement de: {input_file}")
@@ -261,7 +261,7 @@ def main():
     procedures = cleaner.extract_procedures(content)
     
     if not procedures:
-        print("Aucune procédure trouvée. Traitement du fichier complet...")
+        print("No procedure found. Processing the entire file...")
         
         # Traitement du fichier complet
        # cleaned = cleaner.clean_sql(content)
@@ -278,7 +278,7 @@ def main():
         
         return 0
     
-    print(f"{len(procedures)} procedure(s) trouvee(s)")
+    print(f"{len(procedures)} procedure(s) found")
     
     # Traitement de chaque procedure
     cleaned_procedures = []
@@ -290,7 +290,7 @@ def main():
     
     # Sauvegarde
     save_procedures(cleaned_procedures, output_dir)
-    print(f"\n Conversion terminee!")
+    print(f"\n Conversion complete!")
     
     return 0
 
