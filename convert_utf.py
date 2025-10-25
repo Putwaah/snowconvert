@@ -36,10 +36,6 @@ class SQLCleaner:
             sql, 
             flags=re.IGNORECASE
         )
-    
-    import re
-
-    import re
 
     def remove_or_comment_variables(self, data: str):
         """Met en commentaire les variables globales g_* et locales v_*, y compris v_procedure même si elle est sur la ligne de IS"""
