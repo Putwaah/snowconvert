@@ -2,6 +2,47 @@ import os
 import re
 import sys
 
+
+
+# --- REPLACE ROWNUM / SYSDATE ---
+RE_TRIPLE_ROWNUM_SYSDATE = re.compile(r"""
+    \bROWNUM\b \s+ (?:AS\s+)?ROW_NUMBER_ID \s* , \s*
+    \bSYSDATE\b \s+ (?:AS\s+)?ROW_CREATION_DATE \s* , \s*
+    \bSYSDATE\b \s+ (?:AS\s+)?ROW_LAST_UPDATE_DATE
+""", re.IGNORECASE | re.VERBOSE | re.DOTALL)
+
+def normalize_oracle_rownum_sysdate(sql: str) -> str:
+    def _triple_repl(_m):
+        return (
+            "seq8() + 1 AS ROW_NUMBER_ID, "
+            "current_timestamp() AS ROW_CREATION_DATE, "
+            "current_timestamp() AS ROW_LAST_UPDATE_DATE"
+        )
+
+    #1) For the block of the 3rd var
+    s = RE_TRIPLE_ROWNUM_SYSDATE.sub(_triple_repl, sql)
+
+    # 2) Fallbacks if the 3 var is not together
+    s = re.sub(
+        r"\bROWNUM\b\s+(?:AS\s+)?ROW_NUMBER_ID\b",
+        "seq8() + 1 AS ROW_NUMBER_ID",
+        s,
+        flags=re.IGNORECASE,
+    )
+    s = re.sub(
+        r"\bSYSDATE\b\s+(?:AS\s+)?ROW_CREATION_DATE\b",
+        "current_timestamp() AS ROW_CREATION_DATE",
+        s,
+        flags=re.IGNORECASE,
+    )
+    s = re.sub(
+        r"\bSYSDATE\b\s+(?:AS\s+)?ROW_LAST_UPDATE_DATE\b",
+        "current_timestamp() AS ROW_LAST_UPDATE_DATE",
+        s,
+        flags=re.IGNORECASE,
+    )
+    return s
+
 #---------- Remove _bz ----------
 def transform_table_references(sql):
         """Transforme les references de tables avec les schemas appropries"""
@@ -36,56 +77,79 @@ def generate_dbt_config(table_name: str) -> str:
 {{{{ config(
     materialized='table',
     transient={transient},
-    pre_hook=[
-        "CALL DEV.LH2_EXPLOIT_DEV.SET_GLOBAL_VAR_PROC('S','{table_name}','LH2_SILVER_DEV.{table_name}','BEGIN','10')",
-        "CALL DEV.LH2_EXPLOIT_DEV.WRITE_LOG_PROC()"
-    ],
-    post_hook=[
-        "CALL DEV.LH2_EXPLOIT_DEV.SET_GLOBAL_VAR_PROC('S','{table_name}','LH2_SILVER_DEV.{table_name}','COMPLETED','90',NULL::VARCHAR,NULL::VARCHAR,NULL::TIMESTAMP_NTZ,NULL::TIMESTAMP_NTZ,(SELECT COUNT(*) FROM {{{{ this }}}}))",
-        "CALL DEV.LH2_EXPLOIT_DEV.WRITE_LOG_PROC()"
-    ]
+    alias='{table_name}'
 ) }}}}
 """
 
 
-# ---------- Split des statements ----------
+
+
+# ---------- Split statements ----------
 
 def split_sql_statements(sql: str):
     """
-    Découpe au ';' en respectant quotes et parenthèses.
+    Découpe au ';' hors commentaires (-- et /* */),
+    en respectant les parenthèses.
     """
-    stmts = []
-    buf = []
-    in_single = False
-    in_double = False
-    esc = False
+    stmts, buf = [], []
+    in_single = in_double = False
+    in_line_comment = in_block_comment = False
     depth = 0
+    i, n = 0, len(sql)
 
-    for ch in sql:
-        buf.append(ch)
-        if ch == "\\" and not esc:
-            esc = True
+    while i < n:
+        ch = sql[i]
+        nxt = sql[i+1] if i+1 < n else ''
+
+        if in_line_comment:
+            buf.append(ch)
+            if ch == '\n':
+                in_line_comment = False
+            i += 1
             continue
-        if not esc:
-            if ch == "'" and not in_double:
-                in_single = not in_single
-            elif ch == '"' and not in_single:
-                in_double = not in_double
-            elif not in_single and not in_double:
-                if ch == "(":
-                    depth += 1
-                elif ch == ")":
-                    depth = max(0, depth - 1)
-                elif ch == ";" and depth == 0:
-                    stmts.append("".join(buf).strip())
-                    buf = []
-        esc = False
+        if in_block_comment:
+            buf.append(ch)
+            if ch == '*' and nxt == '/':
+                buf.append(nxt); i += 2
+                in_block_comment = False
+                continue
+            i += 1
+            continue
+        if not in_single and not in_double:
+            if ch == '-' and nxt == '-':
+                buf.append(ch); buf.append(nxt); i += 2
+                in_line_comment = True
+                continue
+            if ch == '/' and nxt == '*':
+                buf.append(ch); buf.append(nxt); i += 2
+                in_block_comment = True
+                continue
 
-    rest = "".join(buf).strip()
+        if ch == "'" and not in_double:
+            in_single = not in_single
+            buf.append(ch); i += 1; continue
+        if ch == '"' and not in_single:
+            in_double = not in_double
+            buf.append(ch); i += 1; continue
+
+        if not in_single and not in_double:
+            if ch == '(':
+                depth += 1
+            elif ch == ')':
+                depth = max(0, depth - 1)
+            elif ch == ';' and depth == 0:
+                buf.append(ch)
+                stmts.append(''.join(buf).strip())
+                buf.clear()
+                i += 1
+                continue
+
+        buf.append(ch); i += 1
+
+    rest = ''.join(buf).strip()
     if rest:
         stmts.append(rest)
     return [s for s in stmts if s]
-
 
 def strip_leading_comments(s: str) -> str:
     """Supprime commentaires de tête (-- ... / /* ... */)."""
@@ -116,8 +180,21 @@ RE_INS             = re.compile(r"^\s*INSERT\s+INTO\s+", re.IGNORECASE | re.DOTA
 RE_INS_VALUES      = re.compile(r"^\s*INSERT\s+INTO\s+.+?\bVALUES\b", re.IGNORECASE | re.DOTALL)
 RE_INS_SEL_WITH    = re.compile(r"^\s*INSERT\s+INTO\s+.+?\b(SELECT|WITH)\b", re.IGNORECASE | re.DOTALL)
 RE_SEL_OR_WITH     = re.compile(r"^\s*(?:\(\s*)*(SELECT|WITH)\b", re.IGNORECASE | re.DOTALL)
+RE_TABLE_FROM_INS = re.compile(
+    r"""^\s*INSERT\s+INTO\s+
+        (                                   
+          (?:
+            "[^"]+"|[A-Za-z0-9_#]+          
+          )
+          (?:
+            \.
+            (?:"[^"]+"|[A-Za-z0-9_#]+) 
+          )?
+        )
+    """,
+    re.IGNORECASE | re.DOTALL | re.VERBOSE
+)
 
-RE_TABLE_FROM_INS  = re.compile(r"^\s*INSERT\s+INTO\s+([^\s(]+)", re.IGNORECASE | re.DOTALL)
 RE_CTAS_OR_VIEW    = re.compile(
     r"""^\s*CREATE\s+(?:OR\s+REPLACE\s+)?(?:(?:TRANSIENT|TEMPORARY|TEMP)\s+)?(?P<kind>TABLE|VIEW)\s+
         (?P<name>[^\s(]+)\s+AS\s+(?P<body>.+)$""",
@@ -151,20 +228,21 @@ def extract_model_blocks(content: str):
 
 
 def table_name_from_block_or_filename(block: str, base_filename: str) -> str:
-    m = RE_TABLE_FROM_INS.search(block)
+    head = strip_leading_comments(block)
+
+    m = RE_TABLE_FROM_INS.match(head)
     if m:
-        return m.group(1).split(".")[-1]
+        return m.group(1).split(".")[-1].strip('"')
 
-    m2 = RE_CTAS_OR_VIEW.match(strip_leading_comments(block))
+    m2 = RE_CTAS_OR_VIEW.match(head)
     if m2:
-        return m2.group("name").split(".")[-1]
+        return m2.group("name").split(".")[-1].strip('"')
 
-    # fallback: depuis le nom de fichier
     stem = os.path.splitext(os.path.basename(base_filename))[0]
     u = stem.upper()
-    for suf in ["_PROC", "_PROCEDURE", "_PRC"]:
+    for suf in ["_PROC", "_PROCEDURE", "_PRC", "_proc"]:
         if u.endswith(suf):
-            stem = stem[: -len(suf)]
+            stem = stem[:-len(suf)]
             u = stem.upper()
             break
     for pre in ["RECREATE_", "CREATE_"]:
@@ -172,7 +250,6 @@ def table_name_from_block_or_filename(block: str, base_filename: str) -> str:
             stem = stem[len(pre):]
             break
     return stem or "UNKNOWN_TABLE"
-
 
 def _strip_tail_paren_and_semicolon(sql: str) -> str:
     s = re.sub(r";\s*$", "", sql.rstrip())
@@ -378,8 +455,9 @@ def process_sql_file(file_path: str, output_dir: str) -> bool:
         header = generate_dbt_config(table_name)
         body = normalize_block_for_dbt(raw_block)
 
-        dbt_model = header + "\n\n-- voir pour ajouter exception à\n" + body + "\n"
+        dbt_model = header + "\n" + body + "\n"
         dbt_model = transform_table_references(dbt_model)
+        dbt_model = normalize_oracle_rownum_sysdate(dbt_model)
 
         out_name = f"{stem}.sql" if len(blocks) == 1 else f"{stem}_pt{i}.sql"
         out_path = os.path.join(output_dir, out_name)
