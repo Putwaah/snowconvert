@@ -12,6 +12,9 @@ RE_TRIPLE_ROWNUM_SYSDATE = re.compile(r"""
 """, re.IGNORECASE | re.VERBOSE | re.DOTALL)
 
 def normalize_oracle_rownum_sysdate(sql: str) -> str:
+    """
+    Replaces the Oracle rownum and sysdate system calls with their Snowflake equivalents.
+    """
     def _triple_repl(_m):
         return (
             "seq8() + 1 AS ROW_NUMBER_ID, "
@@ -45,21 +48,21 @@ def normalize_oracle_rownum_sysdate(sql: str) -> str:
 
 #---------- Remove _bz ----------
 def transform_table_references(sql):
-        """Transforme les references de tables avec les schemas appropries"""
+        """Transforms table references with the appropriate schemas"""
         def replacer(match):
             keyword = match.group(1)
             table = match.group(2)
 
-            # Cas spécifique pour steph_apps_FND_FLEX_VALUES#_bz
+            # Specific Case for steph_apps_FND_FLEX_VALUES#_bz
             if table.lower() == 'steph_apps_fnd_flex_values#_bz':
                 return f"{keyword} DEV.LH2_BRONZE_DEV.steph_apps_FND_FLEX_VALUES"
 
-            # Cas général pour les tables finissant par _bz
+            # General case for _bz table
             if table.lower().endswith('_bz'):
                 table_name = table[:-3]
                 return f"{keyword} DEV.LH2_BRONZE_DEV.{table_name}"
 
-            # Sinon, on garde le schéma SILVER
+            # Otherwise, we keep the SILVER scheme.
             return f"{keyword} DEV.LH2_SILVER_DEV.{table}"
         
         return re.sub(
@@ -70,8 +73,10 @@ def transform_table_references(sql):
         )
 
 # ---------- Header dbt ----------
-
 def generate_dbt_config(table_name: str) -> str:
+    """
+    generate header for dbt
+    """
     transient = "true" if "TEMP" in table_name.upper() else "false"
     return f"""-- transient={transient}
 {{{{ config(
@@ -85,11 +90,10 @@ def generate_dbt_config(table_name: str) -> str:
 
 
 # ---------- Split statements ----------
-
 def split_sql_statements(sql: str):
     """
-    Découpe au ';' hors commentaires (-- et /* */),
-    en respectant les parenthèses.
+        Cut at ; outside comments (-- and /* */),
+    respecting parentheses.
     """
     stmts, buf = [], []
     in_single = in_double = False
@@ -152,7 +156,7 @@ def split_sql_statements(sql: str):
     return [s for s in stmts if s]
 
 def strip_leading_comments(s: str) -> str:
-    """Supprime commentaires de tête (-- ... / /* ... */)."""
+    """Delete comment (-- ... / /* ... */)."""
     i = 0
     n = len(s)
     while i < n:
@@ -174,7 +178,7 @@ def strip_leading_comments(s: str) -> str:
     return s[i:]
 
 
-# ---------- Détection des blocs ----------
+# ----------Bloc Detection  ----------
 
 RE_INS             = re.compile(r"^\s*INSERT\s+INTO\s+", re.IGNORECASE | re.DOTALL)
 RE_INS_VALUES      = re.compile(r"^\s*INSERT\s+INTO\s+.+?\bVALUES\b", re.IGNORECASE | re.DOTALL)
@@ -215,7 +219,7 @@ def is_ctas_or_view(stmt: str) -> bool:
 
 def extract_model_blocks(content: str):
     """
-    Un bloc = 1 statement (INSERT ... SELECT/WITH, INSERT ... VALUES, CTAS/VIEW AS, SELECT/WITH nu).
+    1 block = 1 statement (INSERT ... SELECT/WITH, INSERT ... VALUES, CTAS/VIEW AS, SELECT/WITH nu).
     """
     blocks = []
     for stmt in split_sql_statements(content):
@@ -228,6 +232,7 @@ def extract_model_blocks(content: str):
 
 
 def table_name_from_block_or_filename(block: str, base_filename: str) -> str:
+    """Define table name for dbt and Snowflake"""
     head = strip_leading_comments(block)
 
     m = RE_TABLE_FROM_INS.match(head)
@@ -252,6 +257,7 @@ def table_name_from_block_or_filename(block: str, base_filename: str) -> str:
     return stem or "UNKNOWN_TABLE"
 
 def _strip_tail_paren_and_semicolon(sql: str) -> str:
+    """Delete the ; and ) at the ending"""
     s = re.sub(r";\s*$", "", sql.rstrip())
     s = re.sub(r"\)\s*$", "", s)
     return s.rstrip()
@@ -269,6 +275,9 @@ RE_PARSE_INSERT_VALUES = re.compile(
 )
 
 def _split_top_level_tuples(values_str: str):
+    """
+    Split different procedure
+    """
     tuples = []
     in_single = False
     esc = False
@@ -379,7 +388,7 @@ def convert_insert_values_to_select_union(block: str) -> str:
     return "\nUNION ALL\n".join(selects)
 
 
-# ---------- Normalisation pour dbt ----------
+# ---------- DBT Standardization ----------
 
 def normalize_block_for_dbt(block: str) -> str:
     head = strip_leading_comments(block)
