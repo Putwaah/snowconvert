@@ -37,19 +37,19 @@ create or replace PACKAGE BODY LH2_DTH_SILVER_CORE_PKG IS
 -- 17/09/25  3.0.5   GOICHON        Ajout procédure pour créer steph_apps_fnd_flex_value_tl afin de voir si cela améliorer les performance du gold lors de jointure sur cette table
 -- 25/09/25  3.0.6   OJABIT         Ajout procédure pour créer FND_FLEX_VALUES_US qui regroupe les jointures FND_FLEX_VALUES
 -- 29/09/25  3.0.7   OJABIT         Modification du champ INVOICED_AMOUNT_IN_TRANSACTIONAL_CURRENCY en INVOICED_AMOUNT_IN_USD_FIXED
--- 21/10/25  3.0.8   DEROUBAIX      Ajout de la table FILE_VAR_SUBBU
+-- 21/10/25  3.0.8   DEROUBAIX      Ajout de la table FILE_VAR_BU FILE_VAR_SUBBU
 
 -- ***************************************************************************
 
 /****************************************************************************************
-   * PROCEDURE   :  Exceptions_PROC
-   * DESCRIPTION :  Procedure générique pour les exceptions
-   *
-   * PARAMETRES  :
-   * NOM               TYPE        DESCRIPTION
-   * -------------------------------------------------------------------------------------
-   * <parameter>      <TYPE>      <Desc>
-   ****************************************************************************************/
+* PROCEDURE   :  Exceptions_PROC
+* DESCRIPTION :  Procedure générique pour les exceptions
+*
+* PARAMETRES  :
+* NOM               TYPE        DESCRIPTION
+* -------------------------------------------------------------------------------------
+* <parameter>      <TYPE>      <Desc>
+****************************************************************************************/
 
 PROCEDURE Exceptions_PROC
 IS
@@ -74,12 +74,12 @@ BEGIN
 END Exceptions_PROC;
 
 /****************************************************************************************
-   * PROCEDURE   :  Write_Log_PROC
-   * DESCRIPTION :  Procedure générique pour la génération des Logs
-   *
-   * PARAMETRES  :
-   * NOM               TYPE        DESCRIPTION
-   * -------------------------------------------------------------------------------------*/
+* PROCEDURE   :  Write_Log_PROC
+* DESCRIPTION :  Procedure générique pour la génération des Logs
+*
+* PARAMETRES  :
+* NOM               TYPE        DESCRIPTION
+* -------------------------------------------------------------------------------------*/
 
 PROCEDURE Write_Log_PROC
 IS
@@ -109,12 +109,12 @@ BEGIN  --Début traitement
 END Write_Log_PROC;
 
 /****************************************************************************************
-   * PROCEDURE   :  Recreate_Gl_Account_Details_Proc
-   * PARAMETRES  :
-   * NOM               TYPE        DESCRIPTION
-   * -------------------------------------------------------------------------------------
-   * <parameter>      <TYPE>      <Desc>
-   ****************************************************************************************/
+* PROCEDURE   :  Recreate_Gl_Account_Details_Proc
+* PARAMETRES  :
+* NOM               TYPE        DESCRIPTION
+* -------------------------------------------------------------------------------------
+* <parameter>      <TYPE>      <Desc>
+****************************************************************************************/
 
 PROCEDURE Recreate_Gl_Account_Details_Proc
 IS
@@ -295,13 +295,13 @@ EXCEPTION
 END Recreate_Gl_Account_Details_Proc;
 
 /****************************************************************************************
-   * PROCEDURE   :  Recreate_IO_Details_Proc
-   * DESCRIPTION :  création table regroupant les informations liées à l'IO dans différentes tables oracle dans une seule table
-   * PARAMETRES  :
-   * NOM               TYPE        DESCRIPTION
-   * -------------------------------------------------------------------------------------
-   * <parameter>      <TYPE>      <Desc>
-   ****************************************************************************************/
+* PROCEDURE   :  Recreate_IO_Details_Proc
+* DESCRIPTION :  création table regroupant les informations liées à l'IO dans différentes tables oracle dans une seule table
+* PARAMETRES  :
+* NOM               TYPE        DESCRIPTION
+* -------------------------------------------------------------------------------------
+* <parameter>      <TYPE>      <Desc>
+****************************************************************************************/
 
 PROCEDURE Recreate_IO_Details_Proc
 IS
@@ -796,13 +796,13 @@ BEGIN
    END Recreate_IO_Details_Proc;
 
 /****************************************************************************************
-   * PROCEDURE   :  Recreate_OU_Details_Proc
-   * DESCRIPTION :  création table regroupant les informations liées à l'OU dans différentes tables oracle dans une seule table
-   * PARAMETRES  :
-   * NOM               TYPE        DESCRIPTION
-   * -------------------------------------------------------------------------------------
-   * <parameter>      <TYPE>      <Desc>
-   ****************************************************************************************/
+* PROCEDURE   :  Recreate_OU_Details_Proc
+* DESCRIPTION :  création table regroupant les informations liées à l'OU dans différentes tables oracle dans une seule table
+* PARAMETRES  :
+* NOM               TYPE        DESCRIPTION
+* -------------------------------------------------------------------------------------
+* <parameter>      <TYPE>      <Desc>
+****************************************************************************************/
 
 PROCEDURE Recreate_OU_Details_Proc
 IS
@@ -1199,12 +1199,12 @@ EXCEPTION
 END Recreate_OU_Details_Proc;
 
 /****************************************************************************************
-   * PROCEDURE   :  Recreate_Structure_Reseau_Proc, mix des tables oracle et AS400
-   * PARAMETRES  :
-   * NOM               TYPE        DESCRIPTION
-   * -------------------------------------------------------------------------------------
-   * <parameter>      <TYPE>      <Desc>
-   ****************************************************************************************/
+* PROCEDURE   :  Recreate_Structure_Reseau_Proc, mix des tables oracle et AS400
+* PARAMETRES  :
+* NOM               TYPE        DESCRIPTION
+* -------------------------------------------------------------------------------------
+* <parameter>      <TYPE>      <Desc>
+****************************************************************************************/
 
 PROCEDURE Recreate_Structure_Reseau_Proc
 IS
@@ -1505,12 +1505,12 @@ EXCEPTION
 END Recreate_Structure_Reseau_Proc;
 
 /****************************************************************************************
-   * PROCEDURE   :  Recreate_Intercompany_Parameters_Proc
-   * PARAMETRES  :
-   * NOM               TYPE        DESCRIPTION
-   * -------------------------------------------------------------------------------------
-   * <parameter>      <TYPE>      <Desc>
-   ****************************************************************************************/
+* PROCEDURE   :  Recreate_Intercompany_Parameters_Proc
+* PARAMETRES  :
+* NOM               TYPE        DESCRIPTION
+* -------------------------------------------------------------------------------------
+* <parameter>      <TYPE>      <Desc>
+****************************************************************************************/
 
 PROCEDURE Recreate_Intercompany_Parameters_Proc
 IS
@@ -1601,12 +1601,12 @@ EXCEPTION
 END Recreate_Intercompany_Parameters_Proc;
 
 /****************************************************************************************
-   * PROCEDURE   :  Recreate_Gl_Segment1_Proc
-   * PARAMETRES  :
-   * NOM               TYPE        DESCRIPTION
-   * -------------------------------------------------------------------------------------
-   * <parameter>      <TYPE>      <Desc>
-   ****************************************************************************************/
+* PROCEDURE   :  Recreate_Gl_Segment1_Proc
+* PARAMETRES  :
+* NOM               TYPE        DESCRIPTION
+* -------------------------------------------------------------------------------------
+* <parameter>      <TYPE>      <Desc>
+****************************************************************************************/
 
 PROCEDURE Recreate_Gl_Segment1_Proc
 IS
@@ -1894,12 +1894,12 @@ EXCEPTION
 END Recreate_Gl_Segment1_Proc;
 
 /****************************************************************************************
-   * PROCEDURE   :  Recreate_Gl_Segment2_Proc
-   * PARAMETRES  :
-   * NOM               TYPE        DESCRIPTION
-   * -------------------------------------------------------------------------------------
-   * <parameter>      <TYPE>      <Desc>
-   ****************************************************************************************/
+* PROCEDURE   :  Recreate_Gl_Segment2_Proc
+* PARAMETRES  :
+* NOM               TYPE        DESCRIPTION
+* -------------------------------------------------------------------------------------
+* <parameter>      <TYPE>      <Desc>
+****************************************************************************************/
 
 PROCEDURE Recreate_Gl_Segment2_Proc
 IS
@@ -2149,12 +2149,12 @@ EXCEPTION
 END Recreate_Gl_Segment2_Proc;
 
 /****************************************************************************************
-   * PROCEDURE   :  Recreate_Gl_Segment3_Proc
-   * PARAMETRES  :
-   * NOM               TYPE        DESCRIPTION
-   * -------------------------------------------------------------------------------------
-   * <parameter>      <TYPE>      <Desc>
-   ****************************************************************************************/
+* PROCEDURE   :  Recreate_Gl_Segment3_Proc
+* PARAMETRES  :
+* NOM               TYPE        DESCRIPTION
+* -------------------------------------------------------------------------------------
+* <parameter>      <TYPE>      <Desc>
+****************************************************************************************/
 
 PROCEDURE Recreate_Gl_Segment3_Proc
 IS
@@ -2271,12 +2271,12 @@ EXCEPTION
 END Recreate_Gl_Segment3_Proc;
 
 /****************************************************************************************
-   * PROCEDURE   :  Recreate_Gl_Segment4_Proc
-   * PARAMETRES  :
-   * NOM               TYPE        DESCRIPTION
-   * -------------------------------------------------------------------------------------
-   * <parameter>      <TYPE>      <Desc>
-   ****************************************************************************************/
+* PROCEDURE   :  Recreate_Gl_Segment4_Proc
+* PARAMETRES  :
+* NOM               TYPE        DESCRIPTION
+* -------------------------------------------------------------------------------------
+* <parameter>      <TYPE>      <Desc>
+****************************************************************************************/
 
 PROCEDURE Recreate_Gl_Segment4_Proc
 IS
@@ -2797,12 +2797,12 @@ EXCEPTION
 END Recreate_Gl_Segment4_Proc;
 
 /****************************************************************************************
-   * PROCEDURE   :  Recreate_Gl_Segment5_Proc
-   * PARAMETRES  :
-   * NOM               TYPE        DESCRIPTION
-   * -------------------------------------------------------------------------------------
-   * <parameter>      <TYPE>      <Desc>
-   ****************************************************************************************/
+* PROCEDURE   :  Recreate_Gl_Segment5_Proc
+* PARAMETRES  :
+* NOM               TYPE        DESCRIPTION
+* -------------------------------------------------------------------------------------
+* <parameter>      <TYPE>      <Desc>
+****************************************************************************************/
 
 PROCEDURE Recreate_Gl_Segment5_Proc
 IS
@@ -2919,12 +2919,12 @@ EXCEPTION
 END Recreate_Gl_Segment5_Proc;
 
 /****************************************************************************************
-   * PROCEDURE   :  Recreate_Gl_Segment6_Proc
-   * PARAMETRES  :
-   * NOM               TYPE        DESCRIPTION
-   * -------------------------------------------------------------------------------------
-   * <parameter>      <TYPE>      <Desc>
-   ****************************************************************************************/
+* PROCEDURE   :  Recreate_Gl_Segment6_Proc
+* PARAMETRES  :
+* NOM               TYPE        DESCRIPTION
+* -------------------------------------------------------------------------------------
+* <parameter>      <TYPE>      <Desc>
+****************************************************************************************/
 
 PROCEDURE Recreate_Gl_Segment6_Proc
 IS
@@ -3041,12 +3041,12 @@ EXCEPTION
 END Recreate_Gl_Segment6_Proc;
 
 /****************************************************************************************
-   * PROCEDURE   :  Daily_conversion_rates_proc
-   * PARAMETRES  :
-   * NOM               TYPE        DESCRIPTION
-   * -------------------------------------------------------------------------------------
-   * <parameter>      <TYPE>      <Desc>
-   ****************************************************************************************/
+* PROCEDURE   :  Daily_conversion_rates_proc
+* PARAMETRES  :
+* NOM               TYPE        DESCRIPTION
+* -------------------------------------------------------------------------------------
+* <parameter>      <TYPE>      <Desc>
+****************************************************************************************/
 
 PROCEDURE DAILY_CONVERSION_RATES_PROC
 IS
@@ -3155,12 +3155,12 @@ EXCEPTION
 END DAILY_CONVERSION_RATES_PROC;
 
 /****************************************************************************************
-   * PROCEDURE   :  Fixed_rate_proc
-   * PARAMETRES  :
-   * NOM               TYPE        DESCRIPTION
-   * -------------------------------------------------------------------------------------
-   * <parameter>      <TYPE>      <Desc>
-   ****************************************************************************************/
+* PROCEDURE   :  Fixed_rate_proc
+* PARAMETRES  :
+* NOM               TYPE        DESCRIPTION
+* -------------------------------------------------------------------------------------
+* <parameter>      <TYPE>      <Desc>
+****************************************************************************************/
 
 PROCEDURE FIXED_RATE_PROC
 IS
@@ -3261,13 +3261,13 @@ EXCEPTION
 END FIXED_RATE_PROC;
 
 /****************************************************************************************
-   * PROCEDURE   :  Recreate_Country_Zone_Proc
-   * DESCRIPTION :  Create table country_zone
-   * PARAMETRES  :
-   * NOM               TYPE        DESCRIPTION
-   * -------------------------------------------------------------------------------------
-   * <parameter>      <TYPE>      <Desc>
-   ****************************************************************************************/
+* PROCEDURE   :  Recreate_Country_Zone_Proc
+* DESCRIPTION :  Create table country_zone
+* PARAMETRES  :
+* NOM               TYPE        DESCRIPTION
+* -------------------------------------------------------------------------------------
+* <parameter>      <TYPE>      <Desc>
+****************************************************************************************/
 
 PROCEDURE Recreate_Country_Zone_Proc IS
       v_procedure varchar2(100) := 'Recreate_Country_Zone_Proc';
@@ -3380,13 +3380,13 @@ EXCEPTION
 END Recreate_Country_Zone_Proc;
 
 /****************************************************************************************
-   * PROCEDURE   :  Recreate_Customer_Segement_Proc
-   * DESCRIPTION :  Create table VAR_CUSTOMERS_SEGMENT_BU
-   * PARAMETRES  :
-   * NOM               TYPE        DESCRIPTION
-   * -------------------------------------------------------------------------------------
-   * <parameter>      <TYPE>      <Desc>
-   ****************************************************************************************/
+* PROCEDURE   :  Recreate_Customer_Segement_Proc
+* DESCRIPTION :  Create table VAR_CUSTOMERS_SEGMENT_BU
+* PARAMETRES  :
+* NOM               TYPE        DESCRIPTION
+* -------------------------------------------------------------------------------------
+* <parameter>      <TYPE>      <Desc>
+****************************************************************************************/
 
 PROCEDURE Recreate_Customer_Segement_Proc
 IS
@@ -3479,13 +3479,13 @@ EXCEPTION
 END Recreate_Customer_Segement_Proc;
 
 /****************************************************************************************
-   * PROCEDURE   :  COMMANDE_HORS_BACKLOG_PROC
-   * DESCRIPTION :  Create table COMMANDE_HORS_BACKLOG
-   * PARAMETRES  :
-   * NOM               TYPE        DESCRIPTION
-   * -------------------------------------------------------------------------------------
-   * <parameter>      <TYPE>      <Desc>
-   ****************************************************************************************/
+* PROCEDURE   :  COMMANDE_HORS_BACKLOG_PROC
+* DESCRIPTION :  Create table COMMANDE_HORS_BACKLOG
+* PARAMETRES  :
+* NOM               TYPE        DESCRIPTION
+* -------------------------------------------------------------------------------------
+* <parameter>      <TYPE>      <Desc>
+****************************************************************************************/
 
 PROCEDURE COMMANDE_HORS_BACKLOG_PROC
 IS
@@ -3602,13 +3602,13 @@ EXCEPTION
 END COMMANDE_HORS_BACKLOG_PROC;
 
 /****************************************************************************************
-   * PROCEDURE   :  ORDER_CHARGES_PROC
-   * DESCRIPTION :  Create table ORDER_CHARGES
-   * PARAMETRES  :
-   * NOM               TYPE        DESCRIPTION
-   * -------------------------------------------------------------------------------------
-   * <parameter>      <TYPE>      <Desc>
-   ****************************************************************************************/
+* PROCEDURE   :  ORDER_CHARGES_PROC
+* DESCRIPTION :  Create table ORDER_CHARGES
+* PARAMETRES  :
+* NOM               TYPE        DESCRIPTION
+* -------------------------------------------------------------------------------------
+* <parameter>      <TYPE>      <Desc>
+****************************************************************************************/
 
 PROCEDURE ORDER_CHARGES_PROC
 IS
@@ -3704,13 +3704,13 @@ EXCEPTION
 END ORDER_CHARGES_PROC;
 
 /****************************************************************************************
-   * PROCEDURE   :  UOM_CONVERSION_RATE_PROC
-   * DESCRIPTION :  Create table UOM_CONVERSION_RATE
-   * PARAMETRES  :
-   * NOM               TYPE        DESCRIPTION
-   * -------------------------------------------------------------------------------------
-   * <parameter>      <TYPE>      <Desc>
-   ****************************************************************************************/
+* PROCEDURE   :  UOM_CONVERSION_RATE_PROC
+* DESCRIPTION :  Create table UOM_CONVERSION_RATE
+* PARAMETRES  :
+* NOM               TYPE        DESCRIPTION
+* -------------------------------------------------------------------------------------
+* <parameter>      <TYPE>      <Desc>
+****************************************************************************************/
 
 PROCEDURE UOM_CONVERSION_RATE_PROC
 IS
@@ -3907,13 +3907,13 @@ EXCEPTION
 END  DOCUMENT_EIA_LINE_TEXT_TEMP_PROC;
 
 /****************************************************************************************
-   * PROCEDURE   :  MANUAL_ADJUSTMENTS_TEMP_PROC
-   * DESCRIPTION :  Create table MANUAL_ADJUSTMENTS_TEMP
-   * PARAMETRES  :
-   * NOM               TYPE        DESCRIPTION
-   * -------------------------------------------------------------------------------------
-   * <parameter>      <TYPE>      <Desc>
-   ****************************************************************************************/
+* PROCEDURE   :  MANUAL_ADJUSTMENTS_TEMP_PROC
+* DESCRIPTION :  Create table MANUAL_ADJUSTMENTS_TEMP
+* PARAMETRES  :
+* NOM               TYPE        DESCRIPTION
+* -------------------------------------------------------------------------------------
+* <parameter>      <TYPE>      <Desc>
+****************************************************************************************/
 
 PROCEDURE MANUAL_ADJUSTMENTS_TEMP_PROC
 IS
@@ -4049,13 +4049,13 @@ EXCEPTION
 END  MANUAL_ADJUSTMENTS_TEMP_PROC;
 
 /****************************************************************************************
-   * PROCEDURE   :  FILE_VAR_BUSINESS_SEGMENT_NEW_PROC
-   * DESCRIPTION :  Create table FILE_VAR_BUSINESS_SEGMENT_NEW
-   * PARAMETRES  :
-   * NOM               TYPE        DESCRIPTION
-   * -------------------------------------------------------------------------------------
-   * <parameter>      <TYPE>      <Desc>
-   ****************************************************************************************/
+* PROCEDURE   :  FILE_VAR_BUSINESS_SEGMENT_NEW_PROC
+* DESCRIPTION :  Create table FILE_VAR_BUSINESS_SEGMENT_NEW
+* PARAMETRES  :
+* NOM               TYPE        DESCRIPTION
+* -------------------------------------------------------------------------------------
+* <parameter>      <TYPE>      <Desc>
+****************************************************************************************/
 
 PROCEDURE FILE_VAR_BUSINESS_SEGMENT_NEW_PROC
 IS
@@ -4159,13 +4159,13 @@ EXCEPTION
 END  FILE_VAR_BUSINESS_SEGMENT_NEW_PROC;
 
 /****************************************************************************************
-   * PROCEDURE   :  FILE_VAR_BUSINESS_SEGMENT_OLD_PROC
-   * DESCRIPTION :  Create table  FILE_VAR_BUSINESS_SEGMENT_OLD
-   * PARAMETRES  :
-   * NOM               TYPE        DESCRIPTION
-   * -------------------------------------------------------------------------------------
-   * <parameter>      <TYPE>      <Desc>
-   ****************************************************************************************/
+* PROCEDURE   :  FILE_VAR_BUSINESS_SEGMENT_OLD_PROC
+* DESCRIPTION :  Create table  FILE_VAR_BUSINESS_SEGMENT_OLD
+* PARAMETRES  :
+* NOM               TYPE        DESCRIPTION
+* -------------------------------------------------------------------------------------
+* <parameter>      <TYPE>      <Desc>
+****************************************************************************************/
 
 PROCEDURE FILE_VAR_BUSINESS_SEGMENT_OLD_PROC
 IS
@@ -4256,13 +4256,13 @@ EXCEPTION
 END  FILE_VAR_BUSINESS_SEGMENT_OLD_PROC;
 
 /****************************************************************************************
-   * PROCEDURE   :  steph_apps_fnd_flex_value_tl_PROC
-   * DESCRIPTION :  Create table  steph_apps_fnd_flex_values_tl
-   * PARAMETRES  :
-   * NOM               TYPE        DESCRIPTION
-   * -------------------------------------------------------------------------------------
-   * <parameter>      <TYPE>      <Desc>
-   ****************************************************************************************/
+* PROCEDURE   :  steph_apps_fnd_flex_value_tl_PROC
+* DESCRIPTION :  Create table  steph_apps_fnd_flex_values_tl
+* PARAMETRES  :
+* NOM               TYPE        DESCRIPTION
+* -------------------------------------------------------------------------------------
+* <parameter>      <TYPE>      <Desc>
+****************************************************************************************/
 
 PROCEDURE steph_apps_fnd_flex_value_tl_PROC
 IS
@@ -4350,13 +4350,13 @@ EXCEPTION
 END  steph_apps_fnd_flex_value_tl_PROC;
 
 /****************************************************************************************
-   * PROCEDURE   :  Fnd_flex_values_us_proc
-   * DESCRIPTION :  Create table  FND_FLEX_VALUES_US
-   * PARAMETRES  :
-   * NOM               TYPE        DESCRIPTION
-   * -------------------------------------------------------------------------------------
-   * <parameter>      <TYPE>      <Desc>
-   ****************************************************************************************/
+* PROCEDURE   :  Fnd_flex_values_us_proc
+* DESCRIPTION :  Create table  FND_FLEX_VALUES_US
+* PARAMETRES  :
+* NOM               TYPE        DESCRIPTION
+* -------------------------------------------------------------------------------------
+* <parameter>      <TYPE>      <Desc>
+****************************************************************************************/
 
 PROCEDURE Fnd_flex_values_us_proc
 IS
@@ -4587,13 +4587,110 @@ EXCEPTION
 END  Fnd_flex_values_us_proc;
 
 /****************************************************************************************
-   * PROCEDURE   :  FILE_VAR_SUBBU_proc
-   * DESCRIPTION :  Create table  FILE_VAR_SUBBU
-   * PARAMETRES  :
-   * NOM               TYPE        DESCRIPTION
-   * -------------------------------------------------------------------------------------
-   * <parameter>      <TYPE>      <Desc>
-   ****************************************************************************************/
+* PROCEDURE   :  FILE_VAR_BU_proc
+* DESCRIPTION :  Create table  FILE_VAR_SUBBU
+* PARAMETRES  :
+* NOM               TYPE        DESCRIPTION
+* -------------------------------------------------------------------------------------
+* <parameter>      <TYPE>      <Desc>
+****************************************************************************************/
+
+PROCEDURE FILE_VAR_BU_proc
+IS
+   v_procedure varchar2(100) := 'FILE_VAR_BU_proc';
+   v_date_deb_proc  TIMESTAMP := sysdate;
+BEGIN
+   g_programme := $$plsql_unit || '.' || v_procedure ;
+   g_error_code:=NULL;
+   g_error_msg :=NULL;
+   g_date_fin  :=NULL;
+   g_rowcount  :=0;
+
+   g_table     := v_procedure;
+   g_date_deb  := v_date_deb_proc;
+   g_status    := 'BEGIN';
+   g_etape     := '0002 - Begin PROC';
+   Write_Log_PROC;
+
+   g_table     := 'FILE_VAR_BU';
+   g_date_deb  := sysdate;
+   g_status    := 'WIP';
+   g_etape     := $$plsql_line + 1  || ' - num error line' ;
+      EXECUTE IMMEDIATE 'TRUNCATE TABLE FILE_VAR_BU';
+   g_status   := 'COMPLETED';
+   g_etape    := '011 - TRUNCATE TABLE' ;
+   Write_Log_PROC;
+
+   g_table     := 'FILE_VAR_BU';
+   g_date_deb  := sysdate;
+   g_status    := 'WIP';
+   g_etape     := $$plsql_line + 1  || ' - num error line'  ;
+
+   INSERT INTO FILE_VAR_BU
+   SELECT
+      fvb.*,
+      ROWNUM  as ROW_NUMBER_ID,
+      SYSDATE as ROW_CREATION_DATE,
+      SYSDATE as ROW_LAST_UPDATE_DATE
+   FROM FILE_VAR_BU_bz fvb;
+
+   g_status   := 'COMPLETED';
+   g_etape    := '010 - INSERT INTO' ;
+   Write_Log_PROC;
+
+   g_table     := v_procedure;
+   g_date_deb  := sysdate;
+   g_status    := 'WIP';
+   g_etape     := $$plsql_line + 1  || ' - num error line'  ;
+      COMMIT;
+   g_status   := 'COMPLETED';
+   g_etape    := '100 - COMMIT';
+   Write_Log_PROC;
+
+   g_table     := 'FILE_VAR_BU';
+   g_date_deb  := sysdate;
+   g_status    := 'WIP';
+   g_etape     := $$plsql_line + 1  || ' - num error line'  ;
+      LH2_SILVER_ADMIN_PKG.GATHER_TABLE_STATS_PROC('FILE_VAR_BU');
+   g_status   := 'COMPLETED';
+   g_etape    := '099 - STATS' ;
+   Write_Log_PROC;
+
+   g_table    := v_procedure;
+   g_date_deb := v_date_deb_proc;
+   g_status   := 'END SUCCESS';
+   g_etape    := '9992 - End PROC';
+   Write_Log_PROC;
+
+EXCEPTION
+   WHEN OTHERS THEN
+   Exceptions_PROC;
+
+      g_table     := v_procedure;
+      g_date_deb  := sysdate;
+      g_status    := 'WIP';
+      g_etape     := $$plsql_line + 1  || ' - num error line'  ;
+         ROLLBACK;
+      g_status   :='COMPLETED';
+      g_etape    := '111 - ROLLBACK';
+      Write_Log_PROC;
+
+      g_table    := v_procedure;
+      g_date_deb := v_date_deb_proc;
+      g_status   := 'END FAILED';
+      g_etape    := '9992 - End PROC';
+      Write_Log_PROC;
+
+END  FILE_VAR_BU_proc;
+
+/****************************************************************************************
+* PROCEDURE   :  FILE_VAR_SUBBU_proc
+* DESCRIPTION :  Create table  FILE_VAR_SUBBU
+* PARAMETRES  :
+* NOM               TYPE        DESCRIPTION
+* -------------------------------------------------------------------------------------
+* <parameter>      <TYPE>      <Desc>
+****************************************************************************************/
 
 PROCEDURE FILE_VAR_SUBBU_proc
 IS
@@ -4684,14 +4781,14 @@ EXCEPTION
 END  FILE_VAR_SUBBU_proc;
 
 /****************************************************************************************
-   * PROCEDURE   :  MAIN
-   * DESCRIPTION :  Procedure principale
-   *
-   * PARAMETRES  :
-   * NOM               TYPE        DESCRIPTION
-   * -------------------------------------------------------------------------------------
-   * <parameter>      <TYPE>      <Desc>
-   ****************************************************************************************/
+* PROCEDURE   :  MAIN
+* DESCRIPTION :  Procedure principale
+*
+* PARAMETRES  :
+* NOM               TYPE        DESCRIPTION
+* -------------------------------------------------------------------------------------
+* <parameter>      <TYPE>      <Desc>
+****************************************************************************************/
 
 PROCEDURE MAIN (
    pv_errbuf   OUT VARCHAR2,
@@ -4825,7 +4922,6 @@ BEGIN  --Début traitement
    DBMS_OUTPUT.PUT_LINE ('Lancement de FILE_VAR_BUSINESS_SEGMENT_NEW_PROC;');
    FILE_VAR_BUSINESS_SEGMENT_NEW_PROC;
 
-
    v_message:= to_char(sysdate,'DD-MM-RRRR HH24:MI:SS');
    DBMS_OUTPUT.PUT_LINE (v_message);
    DBMS_OUTPUT.PUT_LINE ('Lancement de FILE_VAR_BUSINESS_SEGMENT_OLD_PROC;');
@@ -4837,10 +4933,20 @@ BEGIN  --Début traitement
    DBMS_OUTPUT.PUT_LINE ('Lancement de steph_apps_fnd_flex_value_tl_PROC');
    steph_apps_fnd_flex_value_tl_PROC;
 
-         v_message:= to_char(sysdate,'DD-MM-RRRR HH24:MI:SS');
+   v_message:= to_char(sysdate,'DD-MM-RRRR HH24:MI:SS');
    DBMS_OUTPUT.PUT_LINE (v_message);
    DBMS_OUTPUT.PUT_LINE ('Lancement de Fnd_flex_values_us_proc');
    Fnd_flex_values_us_proc;
+
+   v_message:= to_char(sysdate,'DD-MM-RRRR HH24:MI:SS');
+   DBMS_OUTPUT.PUT_LINE (v_message);
+   DBMS_OUTPUT.PUT_LINE ('Lancement de FILE_VAR_BU_proc');
+   FILE_VAR_BU_proc;
+
+   v_message:= to_char(sysdate,'DD-MM-RRRR HH24:MI:SS');
+   DBMS_OUTPUT.PUT_LINE (v_message);
+   DBMS_OUTPUT.PUT_LINE ('Lancement de FILE_VAR_SUBBU_proc');
+   FILE_VAR_SUBBU_proc;
 
    v_message:= to_char(sysdate,'DD-MM-RRRR HH24:MI:SS');
    DBMS_OUTPUT.PUT_LINE (v_message);
