@@ -11,6 +11,590 @@ RE_TRIPLE_ROWNUM_SYSDATE = re.compile(r"""
     \bSYSDATE\b \s+ (?:AS\s+)?ROW_LAST_UPDATE_DATE
 """, re.IGNORECASE | re.VERBOSE | re.DOTALL)
 
+def derive_cte_name_and_alias(macro_full_name: str) -> tuple[str, str, str]:
+    """
+    A partir du nom complet de macro 'module.func' ou 'func', dérive:
+      - cte_name : 'cte_<func>'
+      - alias    : 'm_<func>'
+      - out_col  : '<func>_out'
+    Toutes en snake_case. Ex: 'silver_funcs.get_country_code_func' ->
+      ('cte_get_country_code_func', 'm_get_country_code_func', 'get_country_code_func_out')
+    """
+    func = macro_full_name.split('.')[-1]
+    base = re.sub(r'[^A-Za-z0-9_]+', '_', func).lower()
+    return f"cte_{base}", f"m_{base}", f"{base}_out"
+
+# --- ANSI JOIN rewrite for old Oracle (+) syntax ---
+
+def _is_kw_at(s: str, i: int, kw: str) -> bool:
+    n = len(s)
+    j = i + len(kw)
+    before = s[i-1] if i > 0 else ' '
+    after  = s[j]   if j < n else ' '
+    return (s[i:j].lower() == kw.lower()
+            and not (before.isalnum() or before == '_')
+            and not (after.isalnum()  or after  == '_'))
+
+def _find_top_level_keyword_positions(sql: str, start_kw: str, next_kws: list[str]):
+    s = sql
+    n = len(s)
+    start = start_kw.lower()
+    nexts = [kw.lower() for kw in next_kws]
+    in_single = in_double = False
+    depth = 0
+    i = 0
+    found_from = -1
+
+    while i < n:
+        ch = s[i]
+        ch2 = s[i:i+2]
+        if ch == "'" and not in_double:
+            in_single = not in_single; i += 1; continue
+        if ch == '"' and not in_single:
+            in_double = not in_double; i += 1; continue
+        if not in_single and not in_double:
+            if ch == '(':
+                depth += 1
+            elif ch == ')':
+                depth = max(0, depth - 1)
+            elif depth == 0:
+                # *** ici : vérif stricte des frontières ***
+                if _is_kw_at(s, i, start):
+                    found_from = i
+                    i += len(start)
+                    break
+        i += 1
+    if found_from < 0:
+        return -1, None
+
+    # Suite inchangée, mais applique la même logique pour `next_kws`
+    j = i
+    best = None
+    in_single = in_double = False
+    depth = 0
+    while j < n:
+        ch = s[j]
+        if ch == "'" and not in_double:
+            in_single = not in_single; j += 1; continue
+        if ch == '"' and not in_single:
+            in_double = not in_double; j += 1; continue
+        if not in_single and not in_double:
+            if ch == '(':
+                depth += 1
+            elif ch == ')':
+                depth = max(0, depth - 1)
+            elif depth == 0:
+                for kw in nexts:
+                    if _is_kw_at(s, j, kw):
+                        best = j
+                        return found_from, best
+        j += 1
+    return found_from, None
+
+    # Cherche prochain mot-clé
+    j = i
+    best = None
+    while j < n:
+        ch = s[j]
+        if ch == "'" and not in_double:
+            in_single = not in_single
+            j += 1; continue
+        if ch == '"' and not in_single:
+            in_double = not in_double
+            j += 1; continue
+        if not in_single and not in_double:
+            if ch == '(':
+                depth += 1
+            elif ch == ')':
+                depth = max(0, depth - 1)
+            elif depth == 0:
+                for kw in nexts:
+                    if s[j:].lower().startswith(kw) and (j == 0 or not s[j-1].isalnum()):
+                        best = j
+                        return found_from, best
+        j += 1
+    return found_from, None
+
+
+def _split_top_level_commas(s: str):
+    """Split par virgule au niveau top-level (hors quotes/parenthèses)."""
+    parts, buf = [], []
+    in_single = in_double = False
+    depth = 0
+    i, n = 0, len(s)
+    while i < n:
+        ch = s[i]
+        if ch == "'" and not in_double:
+            in_single = not in_single
+            buf.append(ch); i += 1; continue
+        if ch == '"' and not in_single:
+            in_double = not in_double
+            buf.append(ch); i += 1; continue
+        if not in_single and not in_double:
+            if ch == '(':
+                depth += 1
+            elif ch == ')':
+                depth = max(0, depth - 1)
+            elif ch == ',' and depth == 0:
+                parts.append(''.join(buf).strip())
+                buf = []
+                i += 1
+                continue
+        buf.append(ch); i += 1
+    rest = ''.join(buf).strip()
+    if rest:
+        parts.append(rest)
+    return parts
+
+
+def _split_top_level_and(s: str):
+    """Split par AND au niveau top-level (hors quotes/parenthèses)."""
+    parts, buf = [], []
+    in_single = in_double = False
+    depth = 0
+    i, n = 0, len(s)
+    while i < n:
+        # try keyword AND (case-insensitive), ensure token boundary
+        if not in_single and not in_double and depth == 0:
+            if s[i:].lower().startswith('and') and (i == 0 or not s[i-1].isalnum()):
+                # check next char boundary
+                j = i + 3
+                if j >= n or not s[j].isalnum():
+                    parts.append(''.join(buf).strip())
+                    buf = []
+                    i = j
+                    continue
+        ch = s[i]
+        if ch == "'" and not in_double:
+            in_single = not in_single
+        elif ch == '"' and not in_single:
+            in_double = not in_double
+        elif not in_single and not in_double:
+            if ch == '(':
+                depth += 1
+            elif ch == ')':
+                depth = max(0, depth - 1)
+        buf.append(ch); i += 1
+    rest = ''.join(buf).strip()
+    if rest:
+        parts.append(rest)
+    # drop empties
+    return [p for p in parts if p]
+
+
+def _parse_from_items(from_clause: str):
+    """
+    Parse chaque item du FROM 'table [AS] alias' ou 'schema.table alias'.
+    Retourne:
+      - items: liste de strings d'origine (pour réécriture)
+      - alias_to_text: {alias_lower: item_text}
+      - aliases: set des alias_lower
+    """
+    items = _split_top_level_commas(from_clause)
+    alias_to_text = {}
+    aliases = []
+    for it in items:
+        m = re.match(r'^\s*([A-Za-z0-9_."#]+(?:\s*\.\s*[A-Za-z0-9_."#]+)*)\s*(?:AS\s+)?([A-Za-z0-9_."#]+)?\s*$', it, flags=re.IGNORECASE)
+        if m:
+            tbl = m.group(1).strip()
+            alias = m.group(2).strip() if m.group(2) else None
+            if not alias:
+                # alias implicite = dernier identifiant du nom de table
+                alias = re.split(r'\s*\.\s*', tbl)[-1].strip('"')
+            alias_lower = alias.lower()
+            alias_to_text[alias_lower] = it.strip()
+            aliases.append(alias_lower)
+        else:
+            # cas exotique -> on garde tel quel, pas d'alias détecté
+            pass
+    return items, alias_to_text, set(aliases)
+
+
+def _detect_alias(expr: str, aliases: set[str]) -> str | None:
+    """
+    Renvoie l'alias (lower) trouvé dans expr en cherchant 'alias.'.
+    On trie par longueur décroissante pour éviter les collisions de préfixe.
+    """
+    for al in sorted(aliases, key=len, reverse=True):
+        if re.search(rf'(?<![A-Za-z0-9_]){re.escape(al)}\s*\.', expr, flags=re.IGNORECASE):
+            return al
+    return None
+
+def _mask_sql_comments_keep_layout(s: str) -> str:
+    """
+    Remplace le contenu des commentaires par des espaces en conservant la mise en page
+    (même nombre de \n), pour garder les index alignés avec la chaîne originale.
+    """
+    if not s:
+        return s
+    out = []
+    i = 0
+    n = len(s)
+    in_single = in_double = False
+    while i < n:
+        ch = s[i]
+        nxt = s[i+1] if i+1 < n else ''
+        # quotes
+        if ch == "'" and not in_double:
+            in_single = not in_single
+            out.append(ch); i += 1; continue
+        if ch == '"' and not in_single:
+            in_double = not in_double
+            out.append(ch); i += 1; continue
+        # commentaires (hors quotes)
+        if not in_single and not in_double:
+            # -- line comment
+            if ch == '-' and nxt == '-':
+                # remplacer jusqu'au \n par des espaces, conserver le \n
+                j = i + 2
+                while j < n and s[j] != '\n':
+                    out.append(' ')
+                    j += 1
+                out.append('\n' if j < n else '')
+                i = j + 1
+                continue
+            # /* block comment */
+            if ch == '/' and nxt == '*':
+                j = i + 2
+                while j + 1 < n and not (s[j] == '*' and s[j+1] == '/'):
+                    out.append(' ' if s[j] != '\n' else '\n')
+                    j += 1
+                if j + 1 < n:
+                    # ajouter '*/' masqué
+                    out.append(' '); out.append(' ')
+                    j += 2
+                i = j
+                continue
+        out.append(ch); i += 1
+    return ''.join(out)
+
+
+def _split_top_level_and_spans(s: str):
+    """
+    Split par AND au niveau top-level, en renvoyant (texte, start, end).
+    's' doit être déjà comment-maské pour éviter d'attraper des AND commentés.
+    """
+    parts = []
+    buf = []
+    in_single = in_double = False
+    depth = 0
+    n = len(s)
+    i = 0
+    seg_start = 0
+    while i < n:
+        # nouveau mot-clé AND top-level ?
+        if not in_single and not in_double and depth == 0:
+            if s[i:].lower().startswith('and') and (i == 0 or not s[i-1].isalnum()):
+                j = i + 3
+                if j >= n or not s[j].isalnum():
+                    # flush segment courant
+                    seg = ''.join(buf).strip()
+                    if seg:
+                        parts.append((seg, seg_start, i))
+                    buf = []
+                    # skip AND
+                    i = j
+                    # nouveau segment
+                    while i < n and s[i].isspace():
+                        i += 1
+                    seg_start = i
+                    continue
+        ch = s[i]
+        if ch == "'" and not in_double:
+            in_single = not in_single
+        elif ch == '"' and not in_single:
+            in_double = not in_double
+        elif not in_single and not in_double:
+            if ch == '(':
+                depth += 1
+            elif ch == ')':
+                depth = max(0, depth - 1)
+        buf.append(ch); i += 1
+    seg = ''.join(buf).strip()
+    if seg:
+        parts.append((seg, seg_start, n))
+    return parts
+
+
+def rewrite_oracle_plus_joins(
+    sql: str,
+    debug: bool = False,
+    rewrite_inner: bool = True,
+    drop_plus_constant_filters: bool = False,
+) -> str:
+    """
+    Réécrit :
+      - 'A = B(+)' -> LEFT/RIGHT JOIN ... ON ...
+      - 'A = B' (implicite) -> INNER JOIN ... ON ... (si rewrite_inner=True)
+      - Appels de macro Jinja dans une égalité -> injection d'un LEFT JOIN sur une CTE GENERIQUE
+        dont le nom/alias/colonne sont dérivés du nom de la fonction :
+           {{ module.func(arg) }} = T.col  ==>  LEFT JOIN cte_func m_func ON {{...}} = m_func.func_out
+        Puis on remplace la macro par m_func.func_out pour permettre la jointure suivante.
+      - Nettoie '(+)', '1=1', 'ON AND ...', 'WHERE ... AND' résiduels.
+    """
+
+    if not sql or not isinstance(sql, str):
+        return sql
+
+    # --- localiser FROM ... WHERE (niveau top) ---
+    idx_from, idx_where = _find_top_level_keyword_positions(sql, 'FROM', ['WHERE'])
+    if idx_from < 0 or idx_where is None:
+        return sql
+
+    tail_kws = ['GROUP BY', 'ORDER BY', 'QUALIFY', 'LIMIT', 'UNION', 'MINUS', 'INTERSECT']
+    _, idx_tail = _find_top_level_keyword_positions(sql[idx_where:], 'WHERE', tail_kws)
+    end_where = (idx_where + idx_tail) if idx_tail is not None else len(sql)
+
+    from_raw = sql[idx_from + len('FROM'): idx_where]
+    where_raw = sql[idx_where + len('WHERE'): end_where]
+
+    # --- masquer commentaires, on garde le layout ---
+    from_mask = _mask_sql_comments_keep_layout(from_raw)
+    where_mask = _mask_sql_comments_keep_layout(where_raw)
+
+    # --- parse FROM items (actifs) ---
+    items = _split_top_level_commas(from_mask.strip())
+    items = [it for it in items if it and not it.strip().startswith('--')]
+    alias_to_text = {}
+    aliases = set()
+    for it in items:
+        m = re.match(
+            r'^\s*([A-Za-z0-9_."#]+(?:\s*\.\s*[A-Za-z0-9_."#]+)*)\s*(?:AS\s+)?([A-Za-z0-9_."#]+)?\s*$',
+            it, flags=re.IGNORECASE
+        )
+        if not m:
+            continue
+        tbl = m.group(1).strip()
+        alias = (m.group(2).strip() if m.group(2) else re.split(r'\s*\.\s*', tbl)[-1].strip('"'))
+        alias_l = alias.lower()
+        alias_to_text[alias_l] = it.strip()
+        aliases.add(alias_l)
+
+    if not items or not aliases:
+        return sql
+
+    # --- split WHERE conditions actives ---
+    conds_spans = _split_top_level_and_spans(where_mask)
+
+    # groupement des joins
+    join_groups: dict[tuple, list[str]] = {}
+    consumed_spans = set()
+    filters: list[str] = []
+    extra_joins: list[str] = []  # JOIN CTE dérivées des macros
+
+    def _alias_of(expr: str) -> str | None:
+        for al in sorted(aliases, key=len, reverse=True):
+            if re.search(rf'(?<![A-Za-z0-9_]){re.escape(al)}\s*\.', expr, flags=re.IGNORECASE):
+                return al
+        return None
+
+    def _strip_leading_and(txt: str) -> str:
+        return re.sub(r'^\s*and\b', '', txt, flags=re.IGNORECASE).strip()
+
+    def _clean_side(s: str) -> str:
+        return _strip_leading_and(s.replace('(+)',' ').strip())
+
+    # Jinja macro : {{ module.func(args) }}
+    JINJA_CALL_RE = re.compile(r"\{\{\s*([A-Za-z_][\w\.]*)\s*\((.*?)\)\s*\}\}")
+
+    for _, c_start, c_end in conds_spans:
+        raw = where_raw[c_start:c_end]
+        raw_nocom = _mask_sql_comments_keep_layout(raw).strip()
+
+        # coupe sur '=' top-level
+        in_single = in_double = False
+        depth = 0
+        eq_pos = -1
+        for i, ch in enumerate(raw_nocom):
+            if ch == "'" and not in_double:
+                in_single = not in_single
+            elif ch == '"' and not in_single:
+                in_double = not in_double
+            elif not in_single and not in_double:
+                if ch == '(':
+                    depth += 1
+                elif ch == ')':
+                    depth = max(0, depth - 1)
+                elif ch == '=' and depth == 0:
+                    eq_pos = i; break
+
+        if eq_pos < 0:
+            val = _strip_leading_and(raw_nocom)
+            if val:
+                filters.append(val)
+            continue
+
+        lhs_raw = raw_nocom[:eq_pos].strip()
+        rhs_raw = raw_nocom[eq_pos+1:].strip()
+        lhs_plus = '(+)' in lhs_raw
+        rhs_plus = '(+)' in rhs_raw
+
+        lhs = _clean_side(lhs_raw)
+        rhs = _clean_side(rhs_raw)
+
+        # --- macro Jinja détectée ? ---
+        m_left = JINJA_CALL_RE.search(lhs)
+        m_right = JINJA_CALL_RE.search(rhs)
+        if m_left or m_right:
+            mj = m_left or m_right
+            macro_full_name = mj.group(1)         # ex: silver_funcs.get_country_code_func
+            macro_call = mj.group(0)              # ex: {{ silver_funcs.get_country_code_func(KDOHR.BILCOUNTRY) }}
+            cte_name, cte_alias, out_col = derive_cte_name_and_alias(macro_full_name)
+
+            # Injecte un LEFT JOIN sur la CTE générique : {{ macro(...) }} = cte_alias.out_col
+            extra_joins.append(
+                f"\nLEFT JOIN {cte_name} {cte_alias} ON {macro_call} = {cte_alias}.{out_col}"
+            )
+            # On remplace la macro par cte_alias.out_col pour la suite (afin que la condition restante soit joinable)
+            if m_left:
+                lhs = f"{cte_alias}.{out_col}"
+            else:
+                rhs = f"{cte_alias}.{out_col}"
+
+            # Ajoute l'alias aux alias connus (sinon _alias_of ne le verra pas)
+            aliases.add(cte_alias.lower())
+            alias_to_text.setdefault(cte_alias.lower(), f"{cte_name} {cte_alias}")
+
+        # Détection d'alias
+        lhs_alias = _alias_of(lhs)
+        rhs_alias = _alias_of(rhs)
+
+        # Comparaison vers constante avec (+)
+        if (lhs_alias and not rhs_alias or rhs_alias and not lhs_alias) and (lhs_plus or rhs_plus):
+            if drop_plus_constant_filters:
+                consumed_spans.add((c_start, c_end))
+                continue
+            filters.append(f"{lhs} = {rhs}")
+            consumed_spans.add((c_start, c_end))
+            continue
+
+        # OUTER Oracle
+        if lhs_alias and rhs_alias and lhs_alias != rhs_alias and (lhs_plus ^ rhs_plus):
+            key = (lhs_alias, rhs_alias, 'LEFT') if (rhs_plus and not lhs_plus) else (rhs_alias, lhs_alias, 'RIGHT')
+            join_groups.setdefault(key, []).append(f"{lhs} = {rhs}")
+            consumed_spans.add((c_start, c_end))
+            continue
+
+        # INNER implicite
+        if rewrite_inner and lhs_alias and rhs_alias and lhs_alias != rhs_alias and not lhs_plus and not rhs_plus:
+            a, b = sorted([lhs_alias, rhs_alias])
+            key = (a, b, 'INNER')
+            join_groups.setdefault(key, []).append(f"{lhs} = {rhs}")
+            consumed_spans.add((c_start, c_end))
+            continue
+
+        # sinon -> filtre
+        filters.append(f"{lhs} = {rhs}")
+
+    # --- construction FROM + JOINs ---
+    first_item = items[0].strip()
+    m_first = re.match(
+        r'^\s*(?:[A-Za-z0-9_."#]+(?:\s*\.\s*[A-Za-z0-9_."#]+)*)\s*(?:AS\s+)?([A-Za-z0-9_."#]+)?',
+        first_item, flags=re.IGNORECASE
+    )
+    if m_first and m_first.group(1):
+        base_alias = m_first.group(1).strip().strip('"').lower()
+    else:
+        base_alias = re.split(r'\s*\.\s*', first_item)[-1].strip('"').lower()
+
+    from_parts = [first_item]
+    if extra_joins:
+        from_parts.extend(extra_joins)  # on met les JOIN-CTE dès le début
+    joined = {base_alias}
+    for j in extra_joins:
+        # marque leurs alias comme rejoints
+        m_al = re.search(r"\sJOIN\s+[A-Za-z0-9_\.\"#]+\s+([A-Za-z0-9_\"#]+)\s+ON", j, flags=re.IGNORECASE)
+        if m_al:
+            joined.add(m_al.group(1).strip('"').lower())
+
+    remaining = dict(join_groups)
+    progressed = True
+    while progressed and remaining:
+        progressed = False
+        for key, cond_list in list(remaining.items()):
+            a_al, b_al, jtype = key
+            # on nettoie 'AND' en tête dans chaque condition
+            conds = [re.sub(r'^\s*and\b', '', c, flags=re.IGNORECASE).strip() for c in cond_list]
+            cond_txt = " AND ".join([c for c in conds if c])
+
+            if jtype == 'LEFT':
+                l_al, r_al = a_al, b_al
+                if (l_al in joined) and (r_al not in joined):
+                    tbl_txt = alias_to_text.get(r_al, r_al)
+                    from_parts.append(f"\nLEFT JOIN {tbl_txt} ON {cond_txt}")
+                    joined.add(r_al)
+                    remaining.pop(key)
+                    progressed = True
+
+            elif jtype == 'RIGHT':
+                l_al, r_al = a_al, b_al
+                if (r_al in joined) and (l_al not in joined):
+                    tbl_txt = alias_to_text.get(l_al, l_al)
+                    from_parts.append(f"\nRIGHT JOIN {tbl_txt} ON {cond_txt}")
+                    joined.add(l_al)
+                    remaining.pop(key)
+                    progressed = True
+
+            elif jtype == 'INNER':
+                if (a_al in joined) ^ (b_al in joined):
+                    other = b_al if a_al in joined else a_al
+                    tbl_txt = alias_to_text.get(other, other)
+                    from_parts.append(f"\nINNER JOIN {tbl_txt} ON {cond_txt}")
+                    joined.add(other)
+                    remaining.pop(key)
+                    progressed = True
+                elif (a_al in joined) and (b_al in joined):
+                    filters.append(cond_txt)
+                    remaining.pop(key)
+                    progressed = True
+
+    # Fallback : CROSS JOIN pour ce qui reste
+    for al_l, txt in alias_to_text.items():
+        if al_l not in joined:
+            from_parts.append(f"\nCROSS JOIN {txt}")
+            joined.add(al_l)
+
+    new_from = ' '.join(from_parts)
+
+    # --- WHERE restant ---
+    leftover = []
+    for _, c_start, c_end in conds_spans:
+        if (c_start, c_end) in consumed_spans:
+            continue
+        raw = where_raw[c_start:c_end]
+        raw_nocom = _mask_sql_comments_keep_layout(raw)
+        val = re.sub(r'^\s*and\b', '', raw_nocom, flags=re.IGNORECASE).strip()
+        if val:
+            leftover.append(val)
+    leftover.extend(filters)
+
+
+    head = sql[:idx_from]
+    tail = sql[end_where:]
+
+    if leftover:
+        clean = [re.sub(r'^\s*and\b', '', c, flags=re.IGNORECASE).strip() for c in leftover]
+        clean = [c for c in clean if c]
+        where_str = " AND\n  ".join(clean)
+        rebuilt = f"{head}FROM {new_from}\nWHERE {where_str}\n{tail}"
+    else:
+        rebuilt = f"{head}FROM {new_from}\n{tail}"
+
+    # Post-nettoyage de sécurité
+    rebuilt = re.sub(r"(?i)\bON\s+AND\b", "ON ", rebuilt)               # ON AND -> ON
+    rebuilt = re.sub(r"(?i)\bWHERE\s+1\s*=\s*1\s*(AND\s*)?", "WHERE ", rebuilt)
+    rebuilt = re.sub(r"(?i)\bWHERE\s*(AND\s*)+\b", "WHERE ", rebuilt)   # WHERE AND -> WHERE
+    rebuilt = re.sub(r"(?i)\s+AND\s*(AND\s*)+", " AND ", rebuilt)       # double AND
+    rebuilt = re.sub(r"\bORDER\s+by\b", "ORDER BY", rebuilt)
+
+    if debug:
+        for (k1, k2, jt), conds in join_groups.items():
+            print(f"[{jt} JOIN] {k1} <-> {k2}:")
+            for c in conds:
+                print(f"   ON {c}")
+
+    return rebuilt
+
 def normalize_oracle_rownum_sysdate(sql: str) -> str:
     """
     Replaces the Oracle rownum and sysdate system calls with their Snowflake equivalents.
@@ -743,6 +1327,8 @@ def process_sql_file(file_path: str, output_dir: str, mode: str) -> bool:
 
         # 4) Remplacement package -> macros scalaires
         body = transform_pkg_functions_to_macros(body)
+
+        body = rewrite_oracle_plus_joins(body)
 
         # 5) Suite (réécriture FROM/JOIN + normalisation)
         dbt_model = header + "\n" + body + "\n"
